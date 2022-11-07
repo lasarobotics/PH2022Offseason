@@ -26,8 +26,8 @@ public final class Constants {
   public static final int PRIMARY_CONTROLLER_PORT = 0;
 
   // Drive hardware
-  public static final int FRONT_LEFT_MOTOR_PORT = 15;
-  public static final int FRONT_RIGHT_MOTOR_PORT = 14;
-  public static final int REAR_LEFT_MOTOR_PORT = 12;
-  public static final int REAR_RIGHT_MOTOR_PORT = 13;
+  public static final int FRONT_LEFT_MOTOR_PORT = 1;
+  public static final int FRONT_RIGHT_MOTOR_PORT = 2;
+  public static final int REAR_LEFT_MOTOR_PORT = 3;
+  public static final int REAR_RIGHT_MOTOR_PORT = 4;
 }

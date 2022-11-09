@@ -23,8 +23,19 @@ import frc.robot.subsystems.DriveSubsystem;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private static final DriveSubsystem DRIVE_SUBSYSTEM = new DriveSubsystem(DriveSubsystem.initializeHardware(),
-                                                                           Constants.CONTROLLER_DEADBAND);
+  // private static final DriveSubsystem DRIVE_SUBSYSTEM = new DriveSubsystem(DriveSubsystem.initializeHardware(),
+  //                                                                          Constants.CONTROLLER_DEADBAND);
+private static final DriveSubsystem DRIVE_SUBSYSTEM = new DriveSubsystem(DriveSubsystem.initializeHardware(),
+                                                                           Constants.DRIVE_kP,
+                                                                           Constants.DRIVE_kD,
+                                                                           Constants.DRIVE_TURN_SCALAR,
+                                                                           Constants.CONTROLLER_DEADBAND,
+                                                                           Constants.DRIVE_LOOKAHEAD,
+                                                                           Constants.DRIVE_METERS_PER_TICK,
+                                                                           Constants.DRIVE_MAX_LINEAR_SPEED,
+                                                                           Constants.DRIVE_TRACTION_CONTROL_CURVE,
+                                                                           Constants.DRIVE_THROTTLE_INPUT_CURVE,
+                                                                           Constants.DRIVE_TURN_INPUT_CURVE);
   private static final XboxController PRIMARY_CONTROLLER = new XboxController(Constants.PRIMARY_CONTROLLER_PORT);
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -33,7 +44,8 @@ public class RobotContainer {
 
     DRIVE_SUBSYSTEM.setDefaultCommand(
       new RunCommand(
-        () -> DRIVE_SUBSYSTEM.teleop(PRIMARY_CONTROLLER.getLeftY(), PRIMARY_CONTROLLER.getLeftX(), PRIMARY_CONTROLLER.getRightX()), 
+        // () -> DRIVE_SUBSYSTEM.teleop(PRIMARY_CONTROLLER.getLeftY(), PRIMARY_CONTROLLER.getLeftX(), PRIMARY_CONTROLLER.getRightX()), 
+        () -> DRIVE_SUBSYSTEM.teleopPID(PRIMARY_CONTROLLER.getLeftY(), PRIMARY_CONTROLLER.getLeftX(), PRIMARY_CONTROLLER.getRightX()), 
         DRIVE_SUBSYSTEM
       )
     );

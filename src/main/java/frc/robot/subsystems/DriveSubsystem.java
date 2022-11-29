@@ -4,14 +4,13 @@
 
 package frc.robot.subsystems;
 
-import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
-import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.kauailabs.navx.frc.AHRS;
 
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
+import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -22,16 +21,18 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
   public static class Hardware {
     private WPI_TalonSRX lFrontMotor, rFrontMotor;
     private WPI_TalonSRX lRearMotor, rRearMotor;
+    private AHRS navx;
 
     public Hardware(WPI_TalonSRX lFrontMotor, 
                     WPI_TalonSRX rFrontMotor, 
                     WPI_TalonSRX lRearMotor,
-                    WPI_TalonSRX rRearMotor) {
+                    WPI_TalonSRX rRearMotor,
+                    AHRS navx) {
       this.lFrontMotor = lFrontMotor;
       this.rFrontMotor = rFrontMotor;
       this.lRearMotor = lRearMotor;
       this.rRearMotor = rRearMotor;
-
+      this.navx = navx;
     }
 
   }
@@ -43,6 +44,8 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
   private TractionControlController m_tractionControlController;
   private AHRS m_navx;
   private TurnPIDController m_turnPIDController;
+
+  private final double MOTOR_DEADBAND = 0.07;
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem(
@@ -62,16 +65,17 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
     this.m_rFrontMotor = drivetrainHardware.rFrontMotor;
     this.m_lRearMotor = drivetrainHardware.lRearMotor;
     this.m_rRearMotor = drivetrainHardware.rRearMotor;
+    this.m_navx = drivetrainHardware.navx;
 
     this.m_lFrontMotor.setNeutralMode(NeutralMode.Brake);
     this.m_rFrontMotor.setNeutralMode(NeutralMode.Brake);
     this.m_lRearMotor.setNeutralMode(NeutralMode.Brake);
     this.m_rRearMotor.setNeutralMode(NeutralMode.Brake);
 
-    this.m_lFrontMotor.configNeutralDeadband(deadband);
-    this.m_rFrontMotor.configNeutralDeadband(deadband);
-    this.m_lRearMotor.configNeutralDeadband(deadband);
-    this.m_rRearMotor.configNeutralDeadband(deadband);
+    this.m_lFrontMotor.configNeutralDeadband(MOTOR_DEADBAND);
+    this.m_rFrontMotor.configNeutralDeadband(MOTOR_DEADBAND);
+    this.m_lRearMotor.configNeutralDeadband(MOTOR_DEADBAND);
+    this.m_rRearMotor.configNeutralDeadband(MOTOR_DEADBAND);
 
     m_rFrontMotor.setInverted(true);
     m_rRearMotor.setInverted(true);
@@ -83,22 +87,24 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
 
     
     m_navx.calibrate();
-    m_turnPIDController.setSetpoint(0.0);
     resetAngle();
-
+    m_turnPIDController.setSetpoint(0.0);
+    m_turnPIDController.setTolerance(0.125);
   }
 
   public static Hardware initializeHardware() {
     Hardware drivetrainHardware = new Hardware(new WPI_TalonSRX(Constants.FRONT_LEFT_MOTOR_PORT),
                                                new WPI_TalonSRX(Constants.FRONT_RIGHT_MOTOR_PORT),
-                                               new WPI_TalonSRX(Constants.REAR_LEFT_MOTOR_PORT),
-                                               new WPI_TalonSRX(Constants.REAR_RIGHT_MOTOR_PORT));
+                                               new WPI_TalonSRX(Constants.REAR_LEFT_MOTOR_PORT),  
+                                               new WPI_TalonSRX(Constants.REAR_RIGHT_MOTOR_PORT),
+                                               new AHRS(SPI.Port.kMXP));
     return drivetrainHardware;
   }
 
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
+
   }
   
   /**
@@ -132,13 +138,12 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
   }
 
   public void teleopPID(double ySpeed, double xSpeed, double zRotation) {
-    // double speedRequest = Math.sqrt(ySpeed * ySpeed + xSpeed * xSpeed);
     double xSpeedOutput = m_tractionControlController.calculate(getInertialXVelocity(), xSpeed);
     double ySpeedOutput = m_tractionControlController.calculate(getInertialYVelocity(), ySpeed);
 
     double turnOutput = m_turnPIDController.calculate(getAngle(), getTurnRate(), zRotation);
 
-    m_drivetrain.driveCartesian(xSpeedOutput, ySpeedOutput, turnOutput);
+    m_drivetrain.driveCartesian(-ySpeedOutput, xSpeedOutput, -turnOutput);
   }
 
 

@@ -20,7 +20,7 @@ public final class Constants {
   public static final double ROBOT_LOOP_PERIOD = 1.0 / 60.0;
 
   // Controller deadband
-  public static final double CONTROLLER_DEADBAND = 0.1;
+  public static final double CONTROLLER_DEADBAND = 0.15;
 
   // Accessories
   public static final int BLINKIN_LED_CONTROLLER_PORT = 0;
@@ -48,7 +48,7 @@ public final class Constants {
 
   public static final double DRIVE_kP = 0.02;
   public static final double DRIVE_kD = 0.0004;
-  public static final double DRIVE_TURN_SCALAR = 25.0;
+  public static final double DRIVE_TURN_SCALAR = 45.0;
   public static final double DRIVE_LOOKAHEAD = 16;
 
   private static final double DRIVE_THROTTLE_INPUT_CURVE_X[] = { 0.0, 0.5,   1.0 };

@@ -9,11 +9,11 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.XboxController.Button;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.utils.DataLogger;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -23,9 +23,7 @@ import frc.robot.subsystems.DriveSubsystem;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  // private static final DriveSubsystem DRIVE_SUBSYSTEM = new DriveSubsystem(DriveSubsystem.initializeHardware(),
-  //                                                                          Constants.CONTROLLER_DEADBAND);
-private static final DriveSubsystem DRIVE_SUBSYSTEM = new DriveSubsystem(DriveSubsystem.initializeHardware(),
+  private static final DriveSubsystem DRIVE_SUBSYSTEM = new DriveSubsystem(DriveSubsystem.initializeHardware(),
                                                                            Constants.DRIVE_kP,
                                                                            Constants.DRIVE_kD,
                                                                            Constants.DRIVE_TURN_SCALAR,
@@ -36,7 +34,11 @@ private static final DriveSubsystem DRIVE_SUBSYSTEM = new DriveSubsystem(DriveSu
                                                                            Constants.DRIVE_TRACTION_CONTROL_CURVE,
                                                                            Constants.DRIVE_THROTTLE_INPUT_CURVE,
                                                                            Constants.DRIVE_TURN_INPUT_CURVE);
+  
   private static final XboxController PRIMARY_CONTROLLER = new XboxController(Constants.PRIMARY_CONTROLLER_PORT);
+
+  private DataLogger m_logger = DataLogger.getInstance();
+
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // Configure the button bindings
@@ -44,7 +46,6 @@ private static final DriveSubsystem DRIVE_SUBSYSTEM = new DriveSubsystem(DriveSu
 
     DRIVE_SUBSYSTEM.setDefaultCommand(
       new RunCommand(
-        // () -> DRIVE_SUBSYSTEM.teleop(PRIMARY_CONTROLLER.getLeftY(), PRIMARY_CONTROLLER.getLeftX(), PRIMARY_CONTROLLER.getRightX()), 
         () -> DRIVE_SUBSYSTEM.teleopPID(PRIMARY_CONTROLLER.getLeftY(), PRIMARY_CONTROLLER.getLeftX(), PRIMARY_CONTROLLER.getRightX()), 
         DRIVE_SUBSYSTEM
       )
@@ -84,7 +85,13 @@ private static final DriveSubsystem DRIVE_SUBSYSTEM = new DriveSubsystem(DriveSu
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // An ExampleCommand will run in autonomous
     return null;
+  }
+
+  /**
+   * Run this periodically
+   */
+  public void periodic() {
+    m_logger.log();
   }
 }

@@ -4,18 +4,20 @@
 
 package frc.robot.subsystems;
 
+import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
+
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.kauailabs.navx.frc.AHRS;
-
-import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.utils.DataLogger;
 import frc.robot.utils.TractionControlController;
 import frc.robot.utils.TurnPIDController;
+import frc.robot.utils.DataLogger.LogEntry;
 
 public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
   public static class Hardware {
@@ -85,13 +87,31 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
     m_turnPIDController = new TurnPIDController(kP, kD, turnScalar, deadband, lookAhead, turnInputCurve);
     m_tractionControlController = new TractionControlController(deadband, maxLinearSpeed, tractionControlCurve, throttleInputCurve);
 
-    
     m_navx.calibrate();
     resetAngle();
     m_turnPIDController.setSetpoint(0.0);
     m_turnPIDController.setTolerance(0.125);
+
+    addLogEntries();
   }
 
+  private void resetAngle() {
+    m_navx.reset();
+  }
+
+  private void addLogEntries() {
+    DataLogger logger = DataLogger.getInstance();
+    logger.addEntry(new LogEntry(() -> { return m_navx.getAngle(); }, "Angle"));
+    logger.addEntry(new LogEntry(() -> { return m_lFrontMotor.getSupplyCurrent(); }, "Front Left Motor Current"));
+    logger.addEntry(new LogEntry(() -> { return m_rFrontMotor.getSupplyCurrent(); }, "Front Right Motor Current"));
+    logger.addEntry(new LogEntry(() -> { return m_lRearMotor.getSupplyCurrent(); }, "Rear Left Motor Current"));
+    logger.addEntry(new LogEntry(() -> { return m_rRearMotor.getSupplyCurrent(); }, "Rear Right Motor Current"));
+  }
+
+  /**
+   * Initialize hardware devices for drive subsystem
+   * @return hardware object containing all necessary devices for this subsystem
+   */
   public static Hardware initializeHardware() {
     Hardware drivetrainHardware = new Hardware(new WPI_TalonSRX(Constants.FRONT_LEFT_MOTOR_PORT),
                                                new WPI_TalonSRX(Constants.FRONT_RIGHT_MOTOR_PORT),
@@ -117,35 +137,52 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
     m_drivetrain.driveCartesian(-ySpeed, xSpeed, zRotation);
   }
 
-  void resetAngle() {
-    m_navx.reset();
-  }
-
-  double getInertialXVelocity() {
-    return m_navx.getVelocityX();
-  }
-
-  double getInertialYVelocity() {
-    return m_navx.getVelocityY();
-  }
-
-  double getAngle() {
-    return m_navx.getAngle();
-  }
-
-  double getTurnRate() {
-    return m_navx.getRate();
-  }
-
+  /**
+   * Call this repeatedly to drive using PID during teleop
+   * @param ySpeed desired speed in Y direction [-1.0, +1.0]
+   * @param xSpeed desired speed in X direction [-1.0, +1.0]
+   * @param zRotation desired rotation in Z axis [-1.0, +1.0]
+   */
   public void teleopPID(double ySpeed, double xSpeed, double zRotation) {
-    double xSpeedOutput = m_tractionControlController.calculate(getInertialXVelocity(), xSpeed);
-    double ySpeedOutput = m_tractionControlController.calculate(getInertialYVelocity(), ySpeed);
+    double xSpeedOutput = m_tractionControlController.calculate(getInertialVelocityX(), xSpeed);
+    double ySpeedOutput = m_tractionControlController.calculate(getInertialVelocityY(), ySpeed);
 
     double turnOutput = m_turnPIDController.calculate(getAngle(), getTurnRate(), zRotation);
 
-    m_drivetrain.driveCartesian(-ySpeedOutput, xSpeedOutput, -turnOutput);
+    m_drivetrain.driveCartesian(ySpeedOutput, xSpeedOutput, turnOutput);
   }
 
+  /**
+   * Inertial velocity in X axis 
+   * @return velocity in m/s
+   */
+  public double getInertialVelocityX() {
+    return m_navx.getVelocityX();
+  }
+
+  /**
+   * Inertial velocity in Y axis
+   * @return velocity in m/s
+   */
+  public double getInertialVelocityY() {
+    return m_navx.getVelocityY();
+  }
+
+  /**
+   * Angle of robot
+   * @return angle in degrees
+   */
+  public double getAngle() {
+    return m_navx.getAngle();
+  }
+
+  /**
+   * Turn rate of robot
+   * @return turn rate in degrees per second
+   */
+  public double getTurnRate() {
+    return m_navx.getRate();
+  }
 
   @Override
   public void close() {

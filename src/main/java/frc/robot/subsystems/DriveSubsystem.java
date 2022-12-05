@@ -6,18 +6,20 @@ package frc.robot.subsystems;
 
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
+import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.DemandType;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.kauailabs.navx.frc.AHRS;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.SPI;
-import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.utils.DataLogger;
+import frc.robot.utils.DataLogger.LogEntry;
 import frc.robot.utils.TractionControlController;
 import frc.robot.utils.TurnPIDController;
-import frc.robot.utils.DataLogger.LogEntry;
 
 public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
   public static class Hardware {
@@ -42,10 +44,11 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
   private WPI_TalonSRX m_lFrontMotor, m_rFrontMotor;
   private WPI_TalonSRX m_lRearMotor, m_rRearMotor;
 
-  private MecanumDrive m_drivetrain;
   private TractionControlController m_tractionControlController;
   private AHRS m_navx;
   private TurnPIDController m_turnPIDController;
+
+  private double m_deadband;
 
   private final double MOTOR_DEADBAND = 0.07;
 
@@ -69,6 +72,8 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
     this.m_rRearMotor = drivetrainHardware.rRearMotor;
     this.m_navx = drivetrainHardware.navx;
 
+    this.m_deadband = deadband;
+
     this.m_lFrontMotor.setNeutralMode(NeutralMode.Brake);
     this.m_rFrontMotor.setNeutralMode(NeutralMode.Brake);
     this.m_lRearMotor.setNeutralMode(NeutralMode.Brake);
@@ -82,8 +87,9 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
     m_rFrontMotor.setInverted(true);
     m_rRearMotor.setInverted(true);
 
-    this.m_drivetrain = new MecanumDrive(m_lFrontMotor, m_lRearMotor, m_rFrontMotor, m_rRearMotor);
-    m_drivetrain.setDeadband(deadband);
+    m_lRearMotor.follow(m_lFrontMotor);
+    m_rRearMotor.follow(m_rFrontMotor);
+
     m_turnPIDController = new TurnPIDController(kP, kD, turnScalar, deadband, lookAhead, turnInputCurve);
     m_tractionControlController = new TractionControlController(deadband, maxLinearSpeed, tractionControlCurve, throttleInputCurve);
 
@@ -124,32 +130,36 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
-
   }
   
   /**
    * Call this repeatedly to drive during teleop
-   * @param ySpeed desired speed in Y direction [-1.0, +1.0]
-   * @param xSpeed desired speed in X direction [-1.0, +1.0]
-   * @param zRotation desired rotation in Z axis [-1.0, +1.0]
+   * @param ySpeed Desired speed [-1.0, +1.0]
+   * @param turn Turn input [-1.0, +1.0]
    */
-  public void teleop(double ySpeed, double xSpeed, double zRotation) {
-    m_drivetrain.driveCartesian(-ySpeed, xSpeed, zRotation);
+  public void teleop(double speed, double turn) {
+    speed = MathUtil.applyDeadband(speed, m_deadband);
+    turn = MathUtil.applyDeadband(turn, m_deadband);
+
+    m_lFrontMotor.set(ControlMode.PercentOutput, speed, DemandType.ArbitraryFeedForward, -turn);
+    m_rFrontMotor.set(ControlMode.PercentOutput, speed, DemandType.ArbitraryFeedForward, +turn);
   }
 
   /**
    * Call this repeatedly to drive using PID during teleop
-   * @param ySpeed desired speed in Y direction [-1.0, +1.0]
-   * @param xSpeed desired speed in X direction [-1.0, +1.0]
-   * @param zRotation desired rotation in Z axis [-1.0, +1.0]
+   * @param speedRequest Desired speed [-1.0, +1.0]
+   * @param turnRequest Turn input [-1.0, +1.0]
    */
-  public void teleopPID(double ySpeed, double xSpeed, double zRotation) {
-    double xSpeedOutput = m_tractionControlController.calculate(getInertialVelocityX(), xSpeed);
-    double ySpeedOutput = m_tractionControlController.calculate(getInertialVelocityY(), ySpeed);
+  public void teleopPID(double speedRequest, double turnRequest) {
+    // Calculate next speed output
+    double speedOutput = m_tractionControlController.calculate(getInertialVelocityX(), speedRequest);
 
-    double turnOutput = m_turnPIDController.calculate(getAngle(), getTurnRate(), zRotation);
+    // Calculate next turn output
+    double turnOutput = m_turnPIDController.calculate(getAngle(), getTurnRate(), turnRequest);
 
-    m_drivetrain.driveCartesian(ySpeedOutput, xSpeedOutput, turnOutput);
+    // Run motors with appropriate values
+    m_lFrontMotor.set(ControlMode.PercentOutput, speedOutput, DemandType.ArbitraryFeedForward, -turnOutput);
+    m_rFrontMotor.set(ControlMode.PercentOutput, speedOutput, DemandType.ArbitraryFeedForward, +turnOutput);
   }
 
   /**

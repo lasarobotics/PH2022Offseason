@@ -52,7 +52,23 @@ public class DriveSubsystem extends SubsystemBase implements AutoCloseable {
 
   private final double MOTOR_DEADBAND = 0.07;
 
-  /** Creates a new DriveSubsystem. */
+  /**
+   * Create an instance of DriveSubsystem
+   * <p>
+   * NOTE: ONLY ONE INSTANCE SHOULD EXIST AT ANY TIME!
+   * <p>
+   * @param drivetrainHardware Hardware devices required by drivetrain
+   * @param kP Proportional gain
+   * @param kD Derivative gain
+   * @param turnScalar Scalar for turn input (degrees)
+   * @param deadband Deadband for controller input [+0.001, +0.1]
+   * @param lookAhead Turn PID lookahead, in number of loops
+   * @param metersPerTick Meters traveled per encoder tick (meters)
+   * @param maxLinearSpeed Maximum linear speed of the robot (m/s)
+   * @param tractionControlCurve Spline function characterising traction of the robot
+   * @param throttleInputCurve Spline function characterising throttle input
+   * @param turnInputCurve Spline function characterising turn input
+   */
   public DriveSubsystem(
       Hardware drivetrainHardware, 
       double kP,

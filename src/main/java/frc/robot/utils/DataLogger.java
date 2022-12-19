@@ -119,8 +119,6 @@ public class DataLogger {
    * Log all values with current timestamp
    */
   public void log() {
-    for (LogEntry entry : m_logEntries) {
-      entry.log();
-    }
+    for (LogEntry entry : m_logEntries) entry.log();
   }
 }

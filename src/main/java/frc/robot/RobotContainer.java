@@ -50,6 +50,8 @@ public class RobotContainer {
         DRIVE_SUBSYSTEM
       )
     );
+
+    initialize();
   }
 
   /**
@@ -86,6 +88,13 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     return null;
+  }
+
+  /**
+   * Run on robot initialization
+   */
+  public void initialize() {
+    m_logger.startLogging();
   }
 
   /**
